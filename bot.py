@@ -4,11 +4,10 @@ from consts import *
 # 11 - лето 10 - весна осень  9 - зимa
 
 class Bot:
-    def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, is_multi: bool):
+    def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, is_multi: bool, relatives: list,
+                 index: int):
         self.y = y
         self.x = x
-        # self.world_width = len(world[0])
-        # self.board_height = len(world)
         self.gens = gens
         self.max_commands = 15
         self.direction = 0
@@ -18,6 +17,8 @@ class Bot:
         self.delta_color = 2
         self.hp = 100
         self.is_multi = is_multi
+        self.relatives = relatives
+        self.index = index
 
     def more_green(self):
         self.color[1] += DELTA_COLOR
@@ -41,21 +42,17 @@ class Bot:
             self.color[1] = 0
         self.color[2] -= DELTA_COLOR
         if self.color[2] < 0:
-            self.color[2] =
+            self.color[2] = 0
 
-    def move(self, is_rel: bool):  # здесь явно есть ошибки
-        if is_rel:
-            n = 2 * self.direction
-            if n > 7:
-                n -= 8
-            if n in (0, 6, 7):
-                self.x -= 1
-                if self.x < 0:
-                    self.x = WORLD_WIDTH - 1
-            elif n in (2, 3, 4):
-                self.x += 1
-                if self.x > WORLD_WIDTH - 1:
-                    self.x = 0
+    def move(self):  # здесь явно есть ошибки (хотя наверное нет)
+        delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
+        new_x, new_y = self.x + delta_x, self.y + delta_y
+        world[self.y][self.x] = 0  # убираем бота из мира
+        self.x, self.y = new_x, new_y
+        world[self.y][self.x] = self.index  # создаем бота в мире
+
+    def is_relative(self, index):
+        return index in self.relatives
 
     def execute_commands(self):
         count = 0
@@ -78,15 +75,57 @@ class Bot:
                     self.energy += new_energy
                     self.more_green()
                 count += 1
-            elif command == 26:
+            elif command in (26, 27):  # движение (отностельно, абсолютно)
                 if not self.is_multi:
-                    self.direction = self.gens[count + 1] % 8
-                    count += move(False)
+                    if command == 26:  # относительно
+                        new_direction = (self.direction + self.gens[count + 1]) % 8
+                    if command == 27:
+                        new_direction = self.gens[count + 1] % 8
+                    delta_y, delta_x = DELTAS_FOR_DIRECTIONS[new_direction]
+                    new_x, new_y = self.x + delta_x, self.y + delta_y
+                    self.direction = new_direction  # ЕЩЕ НЕ ЗНАЮ, НАДО ЛИ МЕНЯТЬ НАПРАВЛЕНИЕ ВСЕГДА ИЛИ ТОЛЬКО, ЕСЛИ БОТ ТОЧНО ПЕРЕМЕЩАЕТСЯ
+                    if world[new_y][new_x] == 0:
+                        # self.direction = new_direction
+                        self.move()
+                        count += 2
+                    elif world[new_y][new_x] == 1:
+                        count += 3
+                    elif world[new_y][new_x] == 2:
+                        count += 4
+                    elif self.is_relative(world[new_y][new_x]):
+                        count += 6
+                    else:
+                        count += 5
+            elif command in (28, 29):   # скушать
+                if command == 28:   # в относительном нправлении
+                    self.direction = (self.direction + self.gens[count + 1]) % 8
+                if command == 27:
+                    new_direction = self.gens[count + 1] % 8
+                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[new_direction]
+                new_x, new_y = self.x + delta_x, self.y + delta_y
+                self.direction = new_direction
+                if world[new_y][new_x] == 0:
+                    count += 2
+                elif world[new_y][new_x] == 1:
+                    count += 3
+                elif world[new_y][new_x] == 2:  # скушал органику
+                    world[new_y][new_x] = 0
+                    self.y, self.x = new_y, new_x
+                    world[new_y][new_x] = self.index
+                    self.hp += 100
+                    self.more_red()
+                    count += 4
+                else:   # скушал бота (сложная механика)
+
+
 
 
 if __name__ == '__main__':
     season = 2
     levels = {}
     world = [[i // 20 for _ in range(WORLD_WIDTH)] for i in range(WORLD_HEIGHT)]
-    bots_board = [[None for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
-    adam = Bot(20, 20, [25] * 64, 150, 150, False)
+    # bots_board = [[None for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
+    adam = Bot(20, 20, [25] * 64, 150, 150, False, [], 0)
+    bots = []
+    bots.append(adam)
+    world[adam.y][adam.x] = adam.index + 3
