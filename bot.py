@@ -54,6 +54,18 @@ class Bot:
     def is_relative(self, index):
         return index in self.relatives
 
+    def check_coords(self, new_y, new_x):
+        if new_x >= WORLD_WIDTH:
+            new_x = 0
+        elif new_x < 0:
+            new_x = WORLD_WIDTH - 1
+        if new_y >= WORLD_HEIGHT:
+            new_y = 0
+        elif new_y < 0:
+            new_y = WORLD_HEIGHT - 1
+
+        return new_y, new_x
+
     def execute_commands(self):
         count = 0
         for _ in range(15):
@@ -84,6 +96,7 @@ class Bot:
                         new_direction = self.gens[count + 1] % 8
                     delta_y, delta_x = DELTAS_FOR_DIRECTIONS[new_direction]
                     new_x, new_y = self.x + delta_x, self.y + delta_y
+                    new_y, new_x = self.check_coords(new_y, new_x)
                     self.direction = new_direction  # ЕЩЕ НЕ ЗНАЮ, НАДО ЛИ МЕНЯТЬ НАПРАВЛЕНИЕ ВСЕГДА ИЛИ ТОЛЬКО, ЕСЛИ БОТ ТОЧНО ПЕРЕМЕЩАЕТСЯ
                     if world[new_y][new_x] == 0:
                         # self.direction = new_direction
@@ -97,13 +110,14 @@ class Bot:
                         count += 6
                     else:
                         count += 5
-            elif command in (28, 29):   # скушать
-                if command == 28:   # в относительном нправлении
+            elif command in (28, 29):  # скушать
+                if command == 28:  # в относительном нправлении
                     self.direction = (self.direction + self.gens[count + 1]) % 8
                 if command == 27:
                     new_direction = self.gens[count + 1] % 8
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[new_direction]
                 new_x, new_y = self.x + delta_x, self.y + delta_y
+                new_y, new_x = self.check_coords(new_y, new_x)
                 self.direction = new_direction
                 if world[new_y][new_x] == 0:
                     count += 2
@@ -116,12 +130,12 @@ class Bot:
                     self.hp += 100
                     self.more_red()
                     count += 4
-                else:   # скушал бота (сложная механика)
+                else:  # скушал бота (сложная механика)
                     dinner = bots[world[new_y][new_x] - 3]
                     if self.minerals >= dinner.minerals:
                         self.minerals -= dinner.minerals
-                        bots[world[new_y][new_x] - 3] = None    # удаляем жертву
-                        world[new_y][new_x] = self.index    # перемещаем бота
+                        bots[world[new_y][new_x] - 3] = None  # удаляем жертву
+                        world[new_y][new_x] = self.index  # перемещаем бота
                         self.hp += 100 + (dinner.hp // 2)
                         self.more_red()
                         count += 5
@@ -130,7 +144,7 @@ class Bot:
                         self.minerals = 0
                         if self.hp >= dinner.minerals * 2:
                             bots[world[new_y][new_x] - 3] = None
-                            self.hp += 100 + (dinner.hp // 2) - 2*dinner.minerals
+                            self.hp += 100 + (dinner.hp // 2) - 2 * dinner.minerals
                             self.more_red()
                             count += 5
                         else:
@@ -139,9 +153,50 @@ class Bot:
                             bots[self.index] = None
                             count += 5
                     # теперь бот наелся (ну или жертва наелась)
-            elif command in (30, 31): # посмотреть относительно или абсолютно
+            elif command in (30, 31):  # посмотреть относительно или абсолютно
+                if command == 30:  # относительно
+                    self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                else:  # абсолютно
+                    self.direction = self.gens[count + 1] % 8
+                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
+                new_y, new_x = self.y + delta_y, self.x + delta_x
+                new_y, new_x = self.check_coords(new_y, new_x)
+                if world[new_y][new_x] == 0:
+                    count += 2
+                elif world[new_y][new_x] == 1:
+                    count += 3
+                elif world[new_y][new_x] == 2:
+                    count += 4
+                else:  # бот
+                    if self.is_relative(world[new_y][new_x]):
+                        count += 6
+                    else:
+                        count += 5
+            elif command in (32, 42, 33, 51):  # поделиться относительно/абсолютно
+                if command in (32, 42):  # относительно
+                    self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                else:  # абсолютно
+                    self.direction = self.gens[count + 1] % 8
+                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
+                new_y, new_x = self.y + delta_y, self.x + delta_x
+                new_y, new_x = self.check_coords(new_y, new_x)
+                if world[new_y][new_x] == 0:
+                    count += 2
+                elif world[new_y][new_x] == 1:
+                    count += 3
+                elif world[new_y][new_x] == 2:
+                    count += 4
+                else:  # там бот
+                    friend = bots[world[new_y][new_x] - 3]
 
-
+                    if self.hp > friend.hp:
+                        new_hp = (self.hp + friend.hp) // 2
+                        self.hp, friend.hp = new_hp, new_hp
+                    if self.minerals > friend.minerals:
+                        new_minerals = (self.minerals + friend.minerals) // 2
+                        self.minerals, friend.minerals = new_minerals, new_minerals
+                    # разделили поровну минералы и энергию, если у нас больше, чем у соседа
+                    count += 5
 
 
 if __name__ == '__main__':
