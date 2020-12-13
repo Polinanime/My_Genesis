@@ -56,7 +56,8 @@ class Bot:
 
     def execute_commands(self):
         count = 0
-        while count < 15:
+        for _ in range(15):
+            count %= 64
             command = self.gens[count]
             if command == 23:  # поменять направление на параметр
                 param = self.gens[count + 1] % 8
@@ -116,6 +117,29 @@ class Bot:
                     self.more_red()
                     count += 4
                 else:   # скушал бота (сложная механика)
+                    dinner = bots[world[new_y][new_x] - 3]
+                    if self.minerals >= dinner.minerals:
+                        self.minerals -= dinner.minerals
+                        bots[world[new_y][new_x] - 3] = None    # удаляем жертву
+                        world[new_y][new_x] = self.index    # перемещаем бота
+                        self.hp += 100 + (dinner.hp // 2)
+                        self.more_red()
+                        count += 5
+                    else:
+                        dinner.minerals -= self.minerals
+                        self.minerals = 0
+                        if self.hp >= dinner.minerals * 2:
+                            bots[world[new_y][new_x] - 3] = None
+                            self.hp += 100 + (dinner.hp // 2) - 2*dinner.minerals
+                            self.more_red()
+                            count += 5
+                        else:
+                            dinner.minerals = 0
+                            world[self.y][self.x] = 0
+                            bots[self.index] = None
+                            count += 5
+                    # теперь бот наелся (ну или жертва наелась)
+            elif command in (30, 31): # посмотреть относительно или абсолютно
 
 
 
