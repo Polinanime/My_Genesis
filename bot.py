@@ -218,8 +218,8 @@ class Bot:
                     quarter = self.minerals // 4
                     self.minerals -= quarter
                     bots[world[new_y][new_x] - 3].minerals += quarter
-                    if bots[world[new_y][new_x]].minerals > 999:
-                        bots[world[new_y][new_x]] = 999
+                    if bots[world[new_y][new_x] - 3].minerals > 999:
+                        bots[world[new_y][new_x] - 3] = 999
                     count += 5
 
 
