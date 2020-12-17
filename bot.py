@@ -197,6 +197,30 @@ class Bot:
                         self.minerals, friend.minerals = new_minerals, new_minerals
                     # разделили поровну минералы и энергию, если у нас больше, чем у соседа
                     count += 5
+            elif command in (34, 50, 35, 52):  # безвозмездно отдать четверть минералов и энергии
+                if command in (34, 50):  # относительно
+                    self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                else:  # абсолютно
+                    self.direction = self.gens[count + 1] % 8
+                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
+                new_y, new_x = self.y + delta_y, self.x + delta_x
+                new_y, new_x = self.check_coords(new_y, new_x)
+                if world[new_y][new_x] == 0:
+                    count += 2
+                elif world[new_y][new_x] == 1:
+                    count += 3
+                elif world[new_y][new_x] == 2:
+                    count += 4
+                else:  # там бот
+                    quarter = self.energy // 4  # энергия
+                    self.energy -= quarter
+                    bots[world[new_y][new_x] - 3].energy += quarter
+                    quarter = self.minerals // 4
+                    self.minerals -= quarter
+                    bots[world[new_y][new_x] - 3].minerals += quarter
+                    if bots[world[new_y][new_x]].minerals > 999:
+                        bots[world[new_y][new_x]] = 999
+                    count += 5
 
 
 if __name__ == '__main__':
