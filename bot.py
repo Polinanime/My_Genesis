@@ -1,4 +1,5 @@
 from consts import *
+from random import randint
 
 
 # 11 - лето 10 - весна осень  9 - зимa
@@ -221,6 +222,30 @@ class Bot:
                     if bots[world[new_y][new_x] - 3].minerals > 999:
                         bots[world[new_y][new_x] - 3] = 999
                     count += 5
+            elif command == 36:  # выравниться по горизонтали (пока хз что делает)
+                if randint(0, 1):  # с шансом 0.5 поворачиваемся направо
+                    self.direction = 3
+                else:
+                    self.direction = 7  # а тут налево
+                count += 1
+            elif command == 37:  # узнать, на какой высоте
+                param = int(self.gens[count + 1] * 1.5)
+                if self.y < param:
+                    count += 2
+                else:
+                    count += 3
+            elif command == 38:  # узнать, сколько здоровья ( энергии )
+                param = self.gens[count + 1] * 15
+                if self.energy < param:
+                    count += 2
+                else:
+                    count += 3
+            elif command == 39:  # узнать, сколько минералов
+                param = self.gens[count + 1] * 15
+                if self.minerals < param:
+                    count += 2
+                else:
+                    count += 3
 
 
 if __name__ == '__main__':
