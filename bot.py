@@ -1,11 +1,12 @@
 from consts import *
 from random import randint
+from copy import deepcopy
 
 
 # 11 - лето 10 - весна осень  9 - зимa
 
 class Bot:
-    def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, is_multi: bool, relatives: list,
+    def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, relatives: set,
                  index: int):
         self.y = y
         self.x = x
@@ -17,9 +18,10 @@ class Bot:
         self.color = [0, 255, 0]
         self.delta_color = 2
         self.hp = 100
-        self.is_multi = is_multi
-        self.relatives = relatives
         self.index = index
+        self.relatives = relatives
+        self.left_friend_index = None
+        self.right_friend_index = None
 
     def more_green(self):
         self.color[1] += DELTA_COLOR
@@ -55,6 +57,16 @@ class Bot:
     def is_relative(self, index):
         return index in self.relatives
 
+    def is_multi(self):
+        if self.left_friend_index is None and self.right_friend_index is None:  # нет соседей (одноклеточное существо0
+            return 0
+        if self.left_friend_index is not None and self.right_friend_index is None:  # есть только левый сосед (в составе колонии)
+            return 1
+        if self.left_friend_index is None and self.right_friend_index is not None:  # есть только правый сосед (в составе колонии)
+            return 2
+        if self.left_friend_index is not None and self.right_friend_index is not None:  # есть оба соседа (и слева, и справа, в составе колонии)
+            return 3
+
     def check_coords(self, new_y, new_x):
         if new_x >= WORLD_WIDTH:
             new_x = 0
@@ -66,6 +78,27 @@ class Bot:
             new_y = WORLD_HEIGHT - 1
 
         return new_y, new_x
+
+    def find_empty_cell(self):
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                new_y, new_x = self.check_coords(new_y, new_x)
+                if world[new_y][new_x] == 0 and (dx, dy) != (0, 0):
+                    return new_y, new_x  # DIRECTIONS_FOR_DELTAS[(dy, dx)]
+        return -1, -1
+
+    def bot_double(self):
+        self.energy -= 150
+        new_y, new_x = self.find_empty_cell()
+        if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
+            world[self.y][self.x] = 2
+            bots[self.index - 3] = None
+
+        new_gens = deepcopy(self.gens)
+        if randint(1, 4) == 1:
+            new_gens[randint(0, 63)] = randint(0, 63)
+        new_bot = Bot(new_y, new_x, new_gens, )  # TODO: доделать init нового бота
+        # здесь ему задаются здоровье, минералы и все такое
 
     def execute_commands(self):
         count = 0
@@ -192,10 +225,10 @@ class Bot:
 
                     if self.hp > friend.hp:
                         new_hp = (self.hp + friend.hp) // 2
-                        self.hp, friend.hp = new_hp, new_hp
+                        self.hp, bots[world[new_y][new_x] - 3].hp = new_hp, new_hp
                     if self.minerals > friend.minerals:
                         new_minerals = (self.minerals + friend.minerals) // 2
-                        self.minerals, friend.minerals = new_minerals, new_minerals
+                        self.minerals, bots[world[new_y][new_x] - 3].minerals = new_minerals, new_minerals
                     # разделили поровну минералы и энергию, если у нас больше, чем у соседа
                     count += 5
             elif command in (34, 50, 35, 52):  # безвозмездно отдать четверть минералов и энергии
@@ -246,6 +279,9 @@ class Bot:
                     count += 2
                 else:
                     count += 3
+            elif command == 40:  # многоклеточность (создать потомка, связанного с текущим ботом)
+                smth = self.is_multi()
+                # TODO: доделать создание бота
 
 
 if __name__ == '__main__':
@@ -253,7 +289,7 @@ if __name__ == '__main__':
     levels = {}
     world = [[i // 20 for _ in range(WORLD_WIDTH)] for i in range(WORLD_HEIGHT)]
     # bots_board = [[None for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
-    adam = Bot(20, 20, [25] * 64, 150, 150, False, [], 0)
+    adam = Bot(20, 20, [25] * 64, 150, 150, set(), 3)
     bots = []
     bots.append(adam)
     world[adam.y][adam.x] = adam.index + 3
