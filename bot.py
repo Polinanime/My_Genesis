@@ -22,6 +22,7 @@ class Bot:
         self.relatives = relatives
         self.left_friend_index = None
         self.right_friend_index = None
+        self.command_count = 0
 
     def more_green(self):
         self.color[1] += DELTA_COLOR
@@ -87,7 +88,7 @@ class Bot:
                     return new_y, new_x  # DIRECTIONS_FOR_DELTAS[(dy, dx)]
         return -1, -1
 
-    def bot_double(self):
+    def bot_double(self, to_tie):
         self.energy -= 150
         new_y, new_x = self.find_empty_cell()
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
@@ -116,21 +117,22 @@ class Bot:
         new_bot.index = new_bot_index
         new_bot.direction = randint(0, 7)
 
-        if self.is_multi() == 3:    # есть оба соседа
-            new_bot.left_friend_index, new_bot.right_friend_index = self.index, self.right_friend_index
-            bots[self.right_friend_index].left_friend_index = new_bot_index
-            self.right_friend_index = new_bot_index
-        elif self.is_multi() == 2:  # только правый сосед
-            new_bot.left_friend_index, new_bot.right_friend_index = 0, self.index
-            self.left_friend_index = new_bot_index
-        elif self.is_multi() == 1:  # только левый сосед
-            new_bot.left_friend_index, new_bot.right_friend_index = self.index, 0
-            self.right_friend_index = new_bot_index
+        if to_tie:
+            if self.is_multi() == 3:  # есть оба соседа
+                new_bot.left_friend_index, new_bot.right_friend_index = self.index, self.right_friend_index
+                bots[self.right_friend_index].left_friend_index = new_bot_index
+                self.right_friend_index = new_bot_index
+            elif self.is_multi() == 2:  # только правый сосед
+                new_bot.left_friend_index, new_bot.right_friend_index = 0, self.index
+                self.left_friend_index = new_bot_index
+            elif self.is_multi() == 1:  # только левый сосед
+                new_bot.left_friend_index, new_bot.right_friend_index = self.index, 0
+                self.right_friend_index = new_bot_index
 
         bots[new_bot_index] = new_bot
 
     def execute_commands(self):
-        count = 0
+        count = self.command_count
         for _ in range(15):
             count %= 64
             command = self.gens[count]
@@ -311,6 +313,22 @@ class Bot:
             elif command == 40:  # многоклеточность (создать потомка, связанного с текущим ботом)
                 smth = self.is_multi()
                 # TODO: доделать создание бота
+                self.bot_double(False)
+                count += 1
+                break
+            elif command == 41: # размножение (свободного бота)
+                self.bot_double(True)
+                count += 1
+                break
+            elif command == 43: # коружен ли бот
+                if self.find_empty_cell() == (-1, -1):
+                    count += 1
+                else:
+                    count += 2
+
+
+
+        self.command_count = count
 
 
 if __name__ == '__main__':
