@@ -92,13 +92,42 @@ class Bot:
         new_y, new_x = self.find_empty_cell()
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
             world[self.y][self.x] = 2
-            bots[self.index - 3] = None
+            bots.pop(self.index - 3)
 
         new_gens = deepcopy(self.gens)
         if randint(1, 4) == 1:
             new_gens[randint(0, 63)] = randint(0, 63)
-        new_bot = Bot(new_y, new_x, new_gens, )  # TODO: доделать init нового бота
+        self.energy //= 2
+        self.minerals //= 2
+        new_bot = Bot(new_y, new_x, new_gens, self.energy, self.minerals, self.relatives, 0)
         # здесь ему задаются здоровье, минералы и все такое
+        new_bot.color = self.color
+        new_bot_index = None
+        for i in range(len(bots)):
+            if bots[i] is None:
+                new_bot_index = i
+
+        if new_bot_index is None:
+            new_bot_index = len(bots)
+            bots.append(None)
+
+        new_bot_index += 3
+
+        new_bot.index = new_bot_index
+        new_bot.direction = randint(0, 7)
+
+        if self.is_multi() == 3:    # есть оба соседа
+            new_bot.left_friend_index, new_bot.right_friend_index = self.index, self.right_friend_index
+            bots[self.right_friend_index].left_friend_index = new_bot_index
+            self.right_friend_index = new_bot_index
+        elif self.is_multi() == 2:  # только правый сосед
+            new_bot.left_friend_index, new_bot.right_friend_index = 0, self.index
+            self.left_friend_index = new_bot_index
+        elif self.is_multi() == 1:  # только левый сосед
+            new_bot.left_friend_index, new_bot.right_friend_index = self.index, 0
+            self.right_friend_index = new_bot_index
+
+        bots[new_bot_index] = new_bot
 
     def execute_commands(self):
         count = 0
@@ -168,7 +197,7 @@ class Bot:
                     dinner = bots[world[new_y][new_x] - 3]
                     if self.minerals >= dinner.minerals:
                         self.minerals -= dinner.minerals
-                        bots[world[new_y][new_x] - 3] = None  # удаляем жертву
+                        bots.pop(world[new_y][new_x] - 3)  # удаляем жертву
                         world[new_y][new_x] = self.index  # перемещаем бота
                         self.hp += 100 + (dinner.hp // 2)
                         self.more_red()
@@ -177,14 +206,14 @@ class Bot:
                         dinner.minerals -= self.minerals
                         self.minerals = 0
                         if self.hp >= dinner.minerals * 2:
-                            bots[world[new_y][new_x] - 3] = None
+                            bots.pop(world[new_y][new_x] - 3)
                             self.hp += 100 + (dinner.hp // 2) - 2 * dinner.minerals
                             self.more_red()
                             count += 5
                         else:
                             dinner.minerals = 0
                             world[self.y][self.x] = 0
-                            bots[self.index] = None
+                            bots.pop(self.index - 3)
                             count += 5
                     # теперь бот наелся (ну или жертва наелась)
             elif command in (30, 31):  # посмотреть относительно или абсолютно
