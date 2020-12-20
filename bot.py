@@ -29,10 +29,10 @@ class Bot:
         if self.color[1] > 255:
             self.color[1] = 255
 
-        self.color[0] -= DELTA_COLOR
+        self.color[0] -= DELTA_COLOR // 2
         if self.color[0] < 0:
             self.color[0] = 0
-        self.color[2] -= DELTA_COLOR
+        self.color[2] -= DELTA_COLOR // 2
         if self.color[2] < 0:
             self.color[2] = 0
 
@@ -41,12 +41,24 @@ class Bot:
         if self.color[0] > 255:
             self.color[0] = 255
 
-        self.color[1] -= DELTA_COLOR
+        self.color[1] -= DELTA_COLOR // 2
         if self.color[1] < 0:
             self.color[1] = 0
-        self.color[2] -= DELTA_COLOR
+        self.color[2] -= DELTA_COLOR // 2
         if self.color[2] < 0:
             self.color[2] = 0
+
+    def more_blue(self):
+        self.color[2] += DELTA_COLOR
+        if self.color[2] > 255:
+            self.color[2] = 255
+
+        self.color[1] -= DELTA_COLOR // 2
+        if self.color[1] < 0:
+            self.color[1] = 0
+        self.color[0] -= DELTA_COLOR // 2
+        if self.color[0] < 0:
+            self.color[0] = 0
 
     def move(self):  # здесь явно есть ошибки (хотя наверное нет)
         delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
@@ -97,7 +109,7 @@ class Bot:
 
         new_gens = deepcopy(self.gens)
         if randint(1, 4) == 1:
-            new_gens[randint(0, 63)] = randint(0, 63)
+            new_gens[randint(0, 63)] = randint(1, 64)
         self.energy //= 2
         self.minerals //= 2
         new_bot = Bot(new_y, new_x, new_gens, self.energy, self.minerals, self.relatives, 0)
@@ -129,7 +141,7 @@ class Bot:
                 new_bot.left_friend_index, new_bot.right_friend_index = self.index, 0
                 self.right_friend_index = new_bot_index
 
-        bots[new_bot_index] = new_bot
+        bots[new_bot_index - 3] = new_bot
 
     def execute_commands(self):
         count = self.command_count
@@ -316,18 +328,65 @@ class Bot:
                 self.bot_double(False)
                 count += 1
                 break
-            elif command == 41: # размножение (свободного бота)
+            elif command == 41:  # размножение (свободного бота)
                 self.bot_double(True)
                 count += 1
                 break
-            elif command == 43: # коружен ли бот
+            elif command == 43:  # окружен ли бот
                 if self.find_empty_cell() == (-1, -1):
                     count += 1
                 else:
                     count += 2
-
-
-
+            elif command == 44:  # есть ли приход энергии
+                if self.minerals < 100:
+                    t = 0
+                elif self.minerals < 400:
+                    t = 1
+                else:
+                    t = 2
+                smth = season - (self.y - 1) // 5 + t
+                if smth >= 3:
+                    count += 1
+                else:
+                    count += 2
+            elif command == 45:  # прибавляются ли минералы
+                if self.y > MAX_EAT_SUN_HEIGHT:
+                    count += 1
+                else:
+                    count += 2
+            elif command == 46:  # многоклеточный ли я
+                if self.is_multi() == 0:  # одноклеточный
+                    count += 1
+                elif self.is_multi() == 3:  # внутри цепочки
+                    count += 3
+                else:
+                    count += 2  # с краю
+            elif command == 47:  # преобразовать минералы в энергию
+                self.more_blue()
+                if self.minerals > 100:
+                    self.minerals -= 100
+                    self.energy += 400
+                else:
+                    self.energy += 4 * self.minerals
+                    self.minerals = 0
+                if self.energy > 999:
+                    self.energy = 999
+                count += 1
+            elif command == 48:  # мутировать
+                for _ in range(2):
+                    self.gens[randint(0, 63)] = randint(1, 64)
+                count += 1
+                break
+            elif command == 49:  # генная атака
+                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
+                new_y, new_x = self.y + delta_y, self.x + delta_x
+                new_y, new_x = self.check_coords(new_y, new_x)
+                self.energy -= 10
+                if self.energy > 0:
+                    bots[world[new_y][new_x] - 3].gens[randint(0, 63)] = randint(1, 64)
+                count += 1
+            else:
+                count += command
         self.command_count = count
 
 
@@ -336,7 +395,7 @@ if __name__ == '__main__':
     levels = {}
     world = [[i // 20 for _ in range(WORLD_WIDTH)] for i in range(WORLD_HEIGHT)]
     # bots_board = [[None for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
-    adam = Bot(20, 20, [25] * 64, 150, 150, set(), 3)
+    adam = Bot(20, 20, [25] * 64, WORLD_HEIGHT // 2, WORLD_WIDTH // 2, set(), 3)
     bots = []
     bots.append(adam)
     world[adam.y][adam.x] = adam.index + 3
