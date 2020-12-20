@@ -105,13 +105,17 @@ class Bot:
         new_y, new_x = self.find_empty_cell()
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
             world[self.y][self.x] = 2
-            bots.pop(self.index - 3)
+            for index in self.relatives:
+                if bots[index - 3] is not None:
+                    bots[index - 3].relatives.remove(self.index)
+            bots[self.index - 3] = None
 
         new_gens = deepcopy(self.gens)
         if randint(1, 4) == 1:
             new_gens[randint(0, 63)] = randint(1, 64)
         self.energy //= 2
         self.minerals //= 2
+
         new_bot = Bot(new_y, new_x, new_gens, self.energy, self.minerals, self.relatives, 0)
         # здесь ему задаются здоровье, минералы и все такое
         new_bot.color = self.color
@@ -123,7 +127,11 @@ class Bot:
         if new_bot_index is None:
             new_bot_index = len(bots)
             bots.append(None)
-
+        self.relatives.add(new_bot_index)
+        for index in self.relatives:
+            if bots[index - 3] is not None:
+                bots[index - 3].relatives.add(new_bot_index)
+        new_bot.relatives = self.relatives
         new_bot_index += 3
 
         new_bot.index = new_bot_index
@@ -211,7 +219,10 @@ class Bot:
                     dinner = bots[world[new_y][new_x] - 3]
                     if self.minerals >= dinner.minerals:
                         self.minerals -= dinner.minerals
-                        bots.pop(world[new_y][new_x] - 3)  # удаляем жертву
+                        for index in dinner.relatives:
+                            if bots[index - 3] is not None:
+                                bots[index - 3].relatives.remove(dinner.index)
+                        bots[world[new_y][new_x] - 3] = None  # удаляем жертву
                         world[new_y][new_x] = self.index  # перемещаем бота
                         self.hp += 100 + (dinner.hp // 2)
                         self.more_red()
@@ -220,14 +231,20 @@ class Bot:
                         dinner.minerals -= self.minerals
                         self.minerals = 0
                         if self.hp >= dinner.minerals * 2:
-                            bots.pop(world[new_y][new_x] - 3)
+                            for index in self.relatives:
+                                if bots[index - 3] is not None:
+                                    bots[index - 3].relatives.remove(self.index)
+                            bots[world[new_y][new_x] - 3] = None  # умер
                             self.hp += 100 + (dinner.hp // 2) - 2 * dinner.minerals
                             self.more_red()
                             count += 5
                         else:
                             dinner.minerals = 0
                             world[self.y][self.x] = 0
-                            bots.pop(self.index - 3)
+                            for index in self.relatives:
+                                if bots[index - 3] is not None:
+                                    bots[index - 3].relatives.remove(self.index)
+                            bots[self.index - 3] = None  # умер
                             count += 5
                     # теперь бот наелся (ну или жертва наелась)
             elif command in (30, 31):  # посмотреть относительно или абсолютно
