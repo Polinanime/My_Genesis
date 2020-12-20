@@ -2,8 +2,26 @@ from consts import *
 from random import randint
 from copy import deepcopy
 
-
 # 11 - лето 10 - весна осень  9 - зимa
+world = []
+bots = []
+season = 11
+
+
+def update_world(new_world):
+    global world
+    world = new_world
+
+
+def update_bots(new_bots):
+    global bots
+    bots = new_bots
+
+
+def update_season(new_season):
+    global season
+    season = new_season
+
 
 class Bot:
     def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, relatives: set,
@@ -89,12 +107,12 @@ class Bot:
             new_y = 0
         elif new_y < 0:
             new_y = WORLD_HEIGHT - 1
-
         return new_y, new_x
 
     def find_empty_cell(self):
         for dy in (-1, 0, 1):
             for dx in (-1, 0, 1):
+                new_y, new_x = self.y + dy, self.x + dx
                 new_y, new_x = self.check_coords(new_y, new_x)
                 if world[new_y][new_x] == 0 and (dx, dy) != (0, 0):
                     return new_y, new_x  # DIRECTIONS_FOR_DELTAS[(dy, dx)]
@@ -105,9 +123,11 @@ class Bot:
         new_y, new_x = self.find_empty_cell()
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
             world[self.y][self.x] = 2
+            # print(self.relatives)
             for index in self.relatives:
                 if bots[index - 3] is not None:
-                    bots[index - 3].relatives.remove(self.index)
+                    if self.index in bots[index - 3].relatives and index != self.index:
+                        bots[index - 3].relatives.remove(self.index)
             bots[self.index - 3] = None
 
         new_gens = deepcopy(self.gens)
@@ -127,12 +147,13 @@ class Bot:
         if new_bot_index is None:
             new_bot_index = len(bots)
             bots.append(None)
+        new_bot_index += 3
         self.relatives.add(new_bot_index)
         for index in self.relatives:
-            if bots[index - 3] is not None:
+            if bots[index - 3] is not None and index != self.index:
                 bots[index - 3].relatives.add(new_bot_index)
         new_bot.relatives = self.relatives
-        new_bot_index += 3
+        #new_bot_index += 3
 
         new_bot.index = new_bot_index
         new_bot.direction = randint(0, 7)
@@ -157,18 +178,18 @@ class Bot:
             count %= 64
             command = self.gens[count]
             if command == 23:  # поменять направление на параметр
-                param = self.gens[count + 1] % 8
-                self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                param = self.gens[(count + 1) % 64] % 8
+                self.direction = (self.direction + self.gens[(count + 1) % 64] % 8) % 8
                 count += 2
             elif command == 24:  # повернуться в сторону, которая определяется параметром
-                self.direction = self.gens[count + 1] % 8
+                self.direction = self.gens[(count + 1) % 64] % 8
                 count += 2
             elif command == 25:  # фотосинтез
                 if self.minerals < 400:
                     smth = 1
                 else:
                     smth = 2
-                new_energy = season - self.y // 6 + smth
+                new_energy = self.season - self.y // 6 + smth
                 if new_energy > 0:
                     self.energy += new_energy
                     self.more_green()
@@ -176,13 +197,13 @@ class Bot:
             elif command in (26, 27):  # движение (отностельно, абсолютно)
                 if not self.is_multi:
                     if command == 26:  # относительно
-                        new_direction = (self.direction + self.gens[count + 1]) % 8
+                        self.direction = (self.direction + self.gens[(count + 1) % 64]) % 8
                     if command == 27:
-                        new_direction = self.gens[count + 1] % 8
-                    delta_y, delta_x = DELTAS_FOR_DIRECTIONS[new_direction]
+                        self.direction = self.gens[(count + 1) % 64] % 8
+                    delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                     new_x, new_y = self.x + delta_x, self.y + delta_y
                     new_y, new_x = self.check_coords(new_y, new_x)
-                    self.direction = new_direction  # ЕЩЕ НЕ ЗНАЮ, НАДО ЛИ МЕНЯТЬ НАПРАВЛЕНИЕ ВСЕГДА ИЛИ ТОЛЬКО, ЕСЛИ БОТ ТОЧНО ПЕРЕМЕЩАЕТСЯ
+                    # self.direction = new_direction  # ЕЩЕ НЕ ЗНАЮ, НАДО ЛИ МЕНЯТЬ НАПРАВЛЕНИЕ ВСЕГДА ИЛИ ТОЛЬКО, ЕСЛИ БОТ ТОЧНО ПЕРЕМЕЩАЕТСЯ # НАДО
                     if world[new_y][new_x] == 0:
                         # self.direction = new_direction
                         self.move()
@@ -197,13 +218,12 @@ class Bot:
                         count += 5
             elif command in (28, 29):  # скушать
                 if command == 28:  # в относительном нправлении
-                    self.direction = (self.direction + self.gens[count + 1]) % 8
+                    self.direction = (self.direction + self.gens[(count + 1) % 64]) % 8
                 if command == 27:
-                    new_direction = self.gens[count + 1] % 8
-                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[new_direction]
+                    self.direction = self.gens[(count + 1) % 64] % 8
+                delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_x, new_y = self.x + delta_x, self.y + delta_y
                 new_y, new_x = self.check_coords(new_y, new_x)
-                self.direction = new_direction
                 if world[new_y][new_x] == 0:
                     count += 2
                 elif world[new_y][new_x] == 1:
@@ -221,7 +241,8 @@ class Bot:
                         self.minerals -= dinner.minerals
                         for index in dinner.relatives:
                             if bots[index - 3] is not None:
-                                bots[index - 3].relatives.remove(dinner.index)
+                                if dinner.index in bots[index - 3].relatives and index != self.index:
+                                    bots[index - 3].relatives.remove(dinner.index)
                         bots[world[new_y][new_x] - 3] = None  # удаляем жертву
                         world[new_y][new_x] = self.index  # перемещаем бота
                         self.hp += 100 + (dinner.hp // 2)
@@ -233,7 +254,8 @@ class Bot:
                         if self.hp >= dinner.minerals * 2:
                             for index in self.relatives:
                                 if bots[index - 3] is not None:
-                                    bots[index - 3].relatives.remove(self.index)
+                                    if self.index in bots[index - 3] and index != self.index:
+                                        bots[index - 3].relatives.remove(self.index)
                             bots[world[new_y][new_x] - 3] = None  # умер
                             self.hp += 100 + (dinner.hp // 2) - 2 * dinner.minerals
                             self.more_red()
@@ -243,15 +265,16 @@ class Bot:
                             world[self.y][self.x] = 0
                             for index in self.relatives:
                                 if bots[index - 3] is not None:
-                                    bots[index - 3].relatives.remove(self.index)
+                                    if self.index in bots[index - 3].relatives and index != self.index:
+                                        bots[index - 3].relatives.remove(self.index)
                             bots[self.index - 3] = None  # умер
                             count += 5
                     # теперь бот наелся (ну или жертва наелась)
             elif command in (30, 31):  # посмотреть относительно или абсолютно
                 if command == 30:  # относительно
-                    self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                    self.direction = (self.direction + self.gens[(count + 1) % 64] % 8) % 8
                 else:  # абсолютно
-                    self.direction = self.gens[count + 1] % 8
+                    self.direction = self.gens[(count + 1) % 64] % 8
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
@@ -268,9 +291,9 @@ class Bot:
                         count += 5
             elif command in (32, 42, 33, 51):  # поделиться относительно/абсолютно
                 if command in (32, 42):  # относительно
-                    self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                    self.direction = (self.direction + self.gens[(count + 1) % 64] % 8) % 8
                 else:  # абсолютно
-                    self.direction = self.gens[count + 1] % 8
+                    self.direction = self.gens[(count + 1) % 64] % 8
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
@@ -293,9 +316,9 @@ class Bot:
                     count += 5
             elif command in (34, 50, 35, 52):  # безвозмездно отдать четверть минералов и энергии
                 if command in (34, 50):  # относительно
-                    self.direction = (self.direction + self.gens[count + 1] % 8) % 8
+                    self.direction = (self.direction + self.gens[(count + 1) % 64] % 8) % 8
                 else:  # абсолютно
-                    self.direction = self.gens[count + 1] % 8
+                    self.direction = self.gens[(count + 1) % 64] % 8
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
@@ -322,26 +345,24 @@ class Bot:
                     self.direction = 7  # а тут налево
                 count += 1
             elif command == 37:  # узнать, на какой высоте
-                param = int(self.gens[count + 1] * 1.5)
+                param = int(self.gens[(count + 1) % 64] * 1.5)
                 if self.y < param:
                     count += 2
                 else:
                     count += 3
             elif command == 38:  # узнать, сколько здоровья ( энергии )
-                param = self.gens[count + 1] * 15
+                param = self.gens[(count + 1) % 64] * 15
                 if self.energy < param:
                     count += 2
                 else:
                     count += 3
             elif command == 39:  # узнать, сколько минералов
-                param = self.gens[count + 1] * 15
+                param = self.gens[(count + 1) % 64] * 15
                 if self.minerals < param:
                     count += 2
                 else:
                     count += 3
             elif command == 40:  # многоклеточность (создать потомка, связанного с текущим ботом)
-                smth = self.is_multi()
-                # TODO: доделать создание бота
                 self.bot_double(False)
                 count += 1
                 break
@@ -399,7 +420,8 @@ class Bot:
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
                 self.energy -= 10
-                if self.energy > 0:
+                if self.energy > 0 and world[new_y][new_x] >= 3:
+                    #print(world[new_y][new_x] - 3, bots)
                     bots[world[new_y][new_x] - 3].gens[randint(0, 63)] = randint(1, 64)
                 count += 1
             else:
