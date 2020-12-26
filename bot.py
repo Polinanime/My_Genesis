@@ -25,8 +25,7 @@ def update_season(new_season):
 
 
 class Bot:
-    def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, relatives: set,
-                 index: int):
+    def __init__(self, y: int, x: int, gens: list, energy: int, minerals: int, index: int):
         self.y = y
         self.x = x
         self.gens = gens
@@ -38,7 +37,6 @@ class Bot:
         self.delta_color = 2
         self.hp = 100
         self.index = index
-        self.relatives = relatives
         self.left_friend_index = None
         self.right_friend_index = None
         self.command_count = 0
@@ -152,7 +150,7 @@ class Bot:
         self.energy //= 2
         self.minerals //= 2
 
-        new_bot = Bot(new_y, new_x, new_gens, self.energy, self.minerals, self.relatives, 0)
+        new_bot = Bot(new_y, new_x, new_gens, self.energy, self.minerals, 0)
         # здесь ему задаются здоровье, минералы и все такое
         new_bot.color = self.color
         new_bot_index = None
@@ -164,11 +162,7 @@ class Bot:
             new_bot_index = len(bots)
             bots.append(None)
         new_bot_index += 3
-        self.relatives.add(new_bot_index)
-        for index in self.relatives:
-            if bots[index - 3] is not None and index != self.index:
-                bots[index - 3].relatives.add(new_bot_index)
-        new_bot.relatives = self.relatives
+
         # new_bot_index += 3
 
         new_bot.index = new_bot_index
