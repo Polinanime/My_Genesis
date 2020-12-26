@@ -1,6 +1,7 @@
-from consts import *
-from random import randint
 from copy import deepcopy
+from random import randint
+
+from consts import *
 
 # 11 - лето 10 - весна осень  9 - зимa
 world = []
@@ -41,6 +42,13 @@ class Bot:
         self.left_friend_index = None
         self.right_friend_index = None
         self.command_count = 0
+
+    def die_or_kill(self, index):
+        left, right = bots[index].left_friend_index, bots[index].right_friend_index
+        bots[right].right_friend_index = left
+        bots[left].left_friend_index = right
+        world[bots[index].y][bots[index].x] = 0
+        bots[index] = None
 
     def more_green(self):
         self.color[1] += DELTA_COLOR
@@ -86,7 +94,18 @@ class Bot:
         world[self.y][self.x] = self.index  # создаем бота в мире
 
     def is_relative(self, index):
-        return index in self.relatives
+        right = self.right_friend_index
+        while right is not None:
+            if right == index:
+                return True
+            right = bots[right].right_friend_index
+
+        left = self.left_friend_index
+        while left is not None:
+            if left == index:
+                return True
+            left = bots[left].left_friend_index
+        return False
 
     def is_multi(self):
         if self.left_friend_index is None and self.right_friend_index is None:  # нет соседей (одноклеточное существо0
@@ -123,12 +142,7 @@ class Bot:
         new_y, new_x = self.find_empty_cell()
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
             world[self.y][self.x] = 2
-            # print(self.relatives)
-            for index in self.relatives:
-                if bots[index - 3] is not None:
-                    if self.index in bots[index - 3].relatives and index != self.index:
-                        bots[index - 3].relatives.remove(self.index)
-            bots[self.index - 3] = None
+            self.die_or_kill(self.index - 3)
 
         new_gens = deepcopy(self.gens)
         if randint(1, 4) == 1:
@@ -153,7 +167,7 @@ class Bot:
             if bots[index - 3] is not None and index != self.index:
                 bots[index - 3].relatives.add(new_bot_index)
         new_bot.relatives = self.relatives
-        #new_bot_index += 3
+        # new_bot_index += 3
 
         new_bot.index = new_bot_index
         new_bot.direction = randint(0, 7)
@@ -239,11 +253,7 @@ class Bot:
                     dinner = bots[world[new_y][new_x] - 3]
                     if self.minerals >= dinner.minerals:
                         self.minerals -= dinner.minerals
-                        for index in dinner.relatives:
-                            if bots[index - 3] is not None:
-                                if dinner.index in bots[index - 3].relatives and index != self.index:
-                                    bots[index - 3].relatives.remove(dinner.index)
-                        bots[world[new_y][new_x] - 3] = None  # удаляем жертву
+                        self.die_or_kill(world[new_y][new_x] - 3) # удаляем жертву
                         world[new_y][new_x] = self.index  # перемещаем бота
                         self.hp += 100 + (dinner.hp // 2)
                         self.more_red()
@@ -252,22 +262,13 @@ class Bot:
                         dinner.minerals -= self.minerals
                         self.minerals = 0
                         if self.hp >= dinner.minerals * 2:
-                            for index in self.relatives:
-                                if bots[index - 3] is not None:
-                                    if self.index in bots[index - 3] and index != self.index:
-                                        bots[index - 3].relatives.remove(self.index)
-                            bots[world[new_y][new_x] - 3] = None  # умер
+                            self.die_or_kill(world[new_y][new_x] - 3)   #  обед умеръ
                             self.hp += 100 + (dinner.hp // 2) - 2 * dinner.minerals
                             self.more_red()
                             count += 5
                         else:
                             dinner.minerals = 0
-                            world[self.y][self.x] = 0
-                            for index in self.relatives:
-                                if bots[index - 3] is not None:
-                                    if self.index in bots[index - 3].relatives and index != self.index:
-                                        bots[index - 3].relatives.remove(self.index)
-                            bots[self.index - 3] = None  # умер
+                            self.die_or_kill(self.index - 3) # бот умеръ
                             count += 5
                     # теперь бот наелся (ну или жертва наелась)
             elif command in (30, 31):  # посмотреть относительно или абсолютно
@@ -421,7 +422,7 @@ class Bot:
                 new_y, new_x = self.check_coords(new_y, new_x)
                 self.energy -= 10
                 if self.energy > 0 and world[new_y][new_x] >= 3:
-                    #print(world[new_y][new_x] - 3, bots)
+                    # print(world[new_y][new_x] - 3, bots)
                     bots[world[new_y][new_x] - 3].gens[randint(0, 63)] = randint(1, 64)
                 count += 1
             else:
