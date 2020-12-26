@@ -45,8 +45,10 @@ class Bot:
 
     def die_or_kill(self, index):
         left, right = bots[index].left_friend_index, bots[index].right_friend_index
-        bots[right].right_friend_index = left
-        bots[left].left_friend_index = right
+        if left is not None:
+            bots[right].right_friend_index = left
+        if right is not None:
+            bots[left].left_friend_index = right
         world[bots[index].y][bots[index].x] = 0
         bots[index] = None
 
