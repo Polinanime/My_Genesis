@@ -1,27 +1,8 @@
 from copy import deepcopy
 from random import randint
 
-from consts import *
 
 # 11 - лето 10 - весна осень  9 - зимa
-world = []
-bots = []
-season = 11
-
-
-def update_world(new_world):
-    global world
-    world = new_world
-
-
-def update_bots(new_bots):
-    global bots
-    bots = new_bots
-
-
-def update_season(new_season):
-    global season
-    season = new_season
 
 
 class Bot:
@@ -35,20 +16,25 @@ class Bot:
         self.minerals = minerals
         self.color = [0, 255, 0]
         self.delta_color = 2
-        self.hp = 100
         self.index = index
         self.left_friend_index = None
         self.right_friend_index = None
         self.command_count = 0
 
+    def check_values(self):
+        if self.energy <= 0:
+            self.die_or_kill(self.index - 3)
+
     def die_or_kill(self, index):
-        left, right = bots[index].left_friend_index, bots[index].right_friend_index
-        if left is not None:
-            bots[right].right_friend_index = left
-        if right is not None:
-            bots[left].left_friend_index = right
-        world[bots[index].y][bots[index].x] = 0
-        bots[index] = None
+        if genesis.bots[index] is not None:
+            left, right = genesis.bots[index].left_friend_index, genesis.bots[index].right_friend_index
+            if left is not None:
+                genesis.bots[right].left_friend_index = left
+            if right is not None:
+                genesis.bots[left].right_friend_index = right
+            genesis.world[genesis.bots[index].y][genesis.bots[index].x] = 2
+            genesis.bots[index] = None
+            print('дэд инсайд')
 
     def more_green(self):
         self.color[1] += DELTA_COLOR
@@ -86,25 +72,22 @@ class Bot:
         if self.color[0] < 0:
             self.color[0] = 0
 
-    def move(self):  # здесь явно есть ошибки (хотя наверное нет)
-        delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
-        new_x, new_y = self.x + delta_x, self.y + delta_y
-        world[self.y][self.x] = 0  # убираем бота из мира
+    def move(self, new_y, new_x):  # здесь явно есть ошибки (хотя наверное нет)
+        genesis.world[self.y][self.x] = 0  # убираем бота из мира
         self.x, self.y = new_x, new_y
-        world[self.y][self.x] = self.index  # создаем бота в мире
+        genesis.world[self.y][self.x] = self.index  # создаем бота в мире
 
     def is_relative(self, index):
         right = self.right_friend_index
         while right is not None:
             if right == index:
                 return True
-            right = bots[right].right_friend_index
-
+            right = genesis.bots[right].right_friend_index
         left = self.left_friend_index
         while left is not None:
             if left == index:
                 return True
-            left = bots[left].left_friend_index
+            left = genesis.bots[left].left_friend_index
         return False
 
     def is_multi(self):
@@ -132,17 +115,21 @@ class Bot:
         for dy in (-1, 0, 1):
             for dx in (-1, 0, 1):
                 new_y, new_x = self.y + dy, self.x + dx
-                new_y, new_x = self.check_coords(new_y, new_x)
-                if world[new_y][new_x] == 0 and (dx, dy) != (0, 0):
-                    return new_y, new_x  # DIRECTIONS_FOR_DELTAS[(dy, dx)]
+                if 0 <= new_y <= WORLD_HEIGHT - 1:
+                    new_y, new_x = self.check_coords(new_y, new_x)
+                    if genesis.world[new_y][new_x] == 0 and (dx, dy) != (0, 0):
+                        return new_y, new_x  # DIRECTIONS_FOR_DELTAS[(dy, dx)]
         return -1, -1
 
     def bot_double(self, to_tie):
         self.energy -= 150
         new_y, new_x = self.find_empty_cell()
+        # print(new_y, new_x)
+        print(self.energy)
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
-            world[self.y][self.x] = 2
             self.die_or_kill(self.index - 3)
+            print(123)
+            return
 
         new_gens = deepcopy(self.gens)
         if randint(1, 4) == 1:
@@ -154,24 +141,25 @@ class Bot:
         # здесь ему задаются здоровье, минералы и все такое
         new_bot.color = self.color
         new_bot_index = None
-        for i in range(len(bots)):
-            if bots[i] is None:
+        for i in range(len(genesis.bots)):
+            if genesis.bots[i] is None:
                 new_bot_index = i
 
         if new_bot_index is None:
-            new_bot_index = len(bots)
-            bots.append(None)
+            new_bot_index = len(genesis.bots)
+            genesis.bots.append(None)
         new_bot_index += 3
 
         # new_bot_index += 3
 
         new_bot.index = new_bot_index
         new_bot.direction = randint(0, 7)
+        genesis.world[new_bot.y][new_bot.x] = new_bot_index
 
         if to_tie:
             if self.is_multi() == 3:  # есть оба соседа
                 new_bot.left_friend_index, new_bot.right_friend_index = self.index, self.right_friend_index
-                bots[self.right_friend_index].left_friend_index = new_bot_index
+                genesis.bots[self.right_friend_index].left_friend_index = new_bot_index
                 self.right_friend_index = new_bot_index
             elif self.is_multi() == 2:  # только правый сосед
                 new_bot.left_friend_index, new_bot.right_friend_index = 0, self.index
@@ -180,7 +168,7 @@ class Bot:
                 new_bot.left_friend_index, new_bot.right_friend_index = self.index, 0
                 self.right_friend_index = new_bot_index
 
-        bots[new_bot_index - 3] = new_bot
+        genesis.bots[new_bot_index - 3] = new_bot
 
     def execute_commands(self):
         count = self.command_count
@@ -188,7 +176,6 @@ class Bot:
             count %= 64
             command = self.gens[count]
             if command == 23:  # поменять направление на параметр
-                param = self.gens[(count + 1) % 64] % 8
                 self.direction = (self.direction + self.gens[(count + 1) % 64] % 8) % 8
                 count += 2
             elif command == 24:  # повернуться в сторону, которая определяется параметром
@@ -199,7 +186,9 @@ class Bot:
                     smth = 1
                 else:
                     smth = 2
-                new_energy = self.season - self.y // 6 + smth
+                new_energy = genesis.season - self.y // 6 + smth
+                new_energy *= 10
+                print(f'после фотосинтеза прибавилось {new_energy} энергии')
                 if new_energy > 0:
                     self.energy += new_energy
                     self.more_green()
@@ -214,15 +203,15 @@ class Bot:
                     new_x, new_y = self.x + delta_x, self.y + delta_y
                     new_y, new_x = self.check_coords(new_y, new_x)
                     # self.direction = new_direction  # ЕЩЕ НЕ ЗНАЮ, НАДО ЛИ МЕНЯТЬ НАПРАВЛЕНИЕ ВСЕГДА ИЛИ ТОЛЬКО, ЕСЛИ БОТ ТОЧНО ПЕРЕМЕЩАЕТСЯ # НАДО
-                    if world[new_y][new_x] == 0:
+                    if genesis.world[new_y][new_x] == 0:
                         # self.direction = new_direction
-                        self.move()
+                        self.move(new_y, new_x)
                         count += 2
-                    elif world[new_y][new_x] == 1:
+                    elif genesis.world[new_y][new_x] == 1:
                         count += 3
-                    elif world[new_y][new_x] == 2:
+                    elif genesis.world[new_y][new_x] == 2:
                         count += 4
-                    elif self.is_relative(world[new_y][new_x]):
+                    elif self.is_relative(genesis.world[new_y][new_x]):
                         count += 6
                     else:
                         count += 5
@@ -234,38 +223,43 @@ class Bot:
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_x, new_y = self.x + delta_x, self.y + delta_y
                 new_y, new_x = self.check_coords(new_y, new_x)
-                if world[new_y][new_x] == 0:
+                if genesis.world[new_y][new_x] == 0:
                     count += 2
-                elif world[new_y][new_x] == 1:
+                elif genesis.world[new_y][new_x] == 1:
                     count += 3
-                elif world[new_y][new_x] == 2:  # скушал органику
-                    world[new_y][new_x] = 0
+                elif genesis.world[new_y][new_x] == 2:  # скушал органику
+                    genesis.world[new_y][new_x] = 0
                     self.y, self.x = new_y, new_x
-                    world[new_y][new_x] = self.index
-                    self.hp += 100
+                    genesis.world[new_y][new_x] = self.index
+                    self.energy += 100
                     self.more_red()
                     count += 4
-                else:  # скушал бота (сложная механика)
-                    dinner = bots[world[new_y][new_x] - 3]
-                    if self.minerals >= dinner.minerals:
-                        self.minerals -= dinner.minerals
-                        self.die_or_kill(world[new_y][new_x] - 3) # удаляем жертву
-                        world[new_y][new_x] = self.index  # перемещаем бота
-                        self.hp += 100 + (dinner.hp // 2)
-                        self.more_red()
-                        count += 5
-                    else:
-                        dinner.minerals -= self.minerals
-                        self.minerals = 0
-                        if self.hp >= dinner.minerals * 2:
-                            self.die_or_kill(world[new_y][new_x] - 3)   #  обед умеръ
-                            self.hp += 100 + (dinner.hp // 2) - 2 * dinner.minerals
+                elif genesis.world[new_y][new_x] >= 3:  # скушал бота (сложная механика)
+                    dinner = genesis.bots[genesis.world[new_y][new_x] - 3]
+                    if dinner is not None:
+                        if self.minerals >= dinner.minerals:
+                            self.minerals -= dinner.minerals
+                            self.die_or_kill(genesis.world[new_y][new_x] - 3)  # удаляем жертву
+                            # genesis.world[new_y][new_x] = self.index  # перемещаем бота
+                            self.move(new_y, new_x)  # а теперь нормально перемещаем
+                            self.energy += 100 + (dinner.energy // 2)
                             self.more_red()
                             count += 5
                         else:
-                            dinner.minerals = 0
-                            self.die_or_kill(self.index - 3) # бот умеръ
-                            count += 5
+                            dinner.minerals -= self.minerals
+                            self.minerals = 0
+                            if self.energy >= dinner.minerals * 2:
+                                self.die_or_kill(genesis.world[new_y][new_x] - 3)  # обед умеръ
+                                self.energy += 100 + (dinner.energy // 2) - 2 * dinner.minerals
+                                self.more_red()
+                                count += 5
+                            else:
+                                dinner.minerals = 0
+                                self.die_or_kill(self.index - 3)  # бот умеръ
+                                count += 5
+                                break
+                    else:
+                        count += 5
                     # теперь бот наелся (ну или жертва наелась)
             elif command in (30, 31):  # посмотреть относительно или абсолютно
                 if command == 30:  # относительно
@@ -275,14 +269,14 @@ class Bot:
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
-                if world[new_y][new_x] == 0:
+                if genesis.world[new_y][new_x] == 0:
                     count += 2
-                elif world[new_y][new_x] == 1:
+                elif genesis.world[new_y][new_x] == 1:
                     count += 3
-                elif world[new_y][new_x] == 2:
+                elif genesis.world[new_y][new_x] == 2:
                     count += 4
                 else:  # бот
-                    if self.is_relative(world[new_y][new_x]):
+                    if self.is_relative(genesis.world[new_y][new_x]):
                         count += 6
                     else:
                         count += 5
@@ -294,22 +288,26 @@ class Bot:
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
-                if world[new_y][new_x] == 0:
+                if genesis.world[new_y][new_x] == 0:
                     count += 2
-                elif world[new_y][new_x] == 1:
+                elif genesis.world[new_y][new_x] == 1:
                     count += 3
-                elif world[new_y][new_x] == 2:
+                elif genesis.world[new_y][new_x] == 2:
                     count += 4
                 else:  # там бот
-                    friend = bots[world[new_y][new_x] - 3]
-
-                    if self.hp > friend.hp:
-                        new_hp = (self.hp + friend.hp) // 2
-                        self.hp, bots[world[new_y][new_x] - 3].hp = new_hp, new_hp
-                    if self.minerals > friend.minerals:
-                        new_minerals = (self.minerals + friend.minerals) // 2
-                        self.minerals, bots[world[new_y][new_x] - 3].minerals = new_minerals, new_minerals
-                    # разделили поровну минералы и энергию, если у нас больше, чем у соседа
+                    print(genesis.world[new_y][new_x])
+                    try:
+                        friend = genesis.bots[genesis.world[new_y][new_x] - 3]
+                        if self.energy > friend.energy:
+                            new_hp = (self.energy + friend.energy) // 2
+                            self.energy, genesis.bots[genesis.world[new_y][new_x] - 3].energy = new_hp, new_hp
+                        if self.minerals > friend.minerals:
+                            new_minerals = (self.minerals + friend.minerals) // 2
+                            self.minerals, genesis.bots[
+                                genesis.world[new_y][new_x] - 3].minerals = new_minerals, new_minerals
+                        # разделили поровну минералы и энергию, если у нас больше, чем у соседа
+                    except Exception:
+                        pass
                     count += 5
             elif command in (34, 50, 35, 52):  # безвозмездно отдать четверть минералов и энергии
                 if command in (34, 50):  # относительно
@@ -319,23 +317,24 @@ class Bot:
                 delta_y, delta_x = DELTAS_FOR_DIRECTIONS[self.direction]
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
-                if world[new_y][new_x] == 0:
+                if genesis.world[new_y][new_x] == 0:
                     count += 2
-                elif world[new_y][new_x] == 1:
+                elif genesis.world[new_y][new_x] == 1:
                     count += 3
-                elif world[new_y][new_x] == 2:
+                elif genesis.world[new_y][new_x] == 2:
                     count += 4
                 else:  # там бот
-                    quarter = self.energy // 4  # энергия
-                    self.energy -= quarter
-                    bots[world[new_y][new_x] - 3].energy += quarter
-                    quarter = self.minerals // 4
-                    self.minerals -= quarter
-                    bots[world[new_y][new_x] - 3].minerals += quarter
-                    if bots[world[new_y][new_x] - 3].minerals > 999:
-                        bots[world[new_y][new_x] - 3] = 999
+                    if genesis.bots[genesis.world[new_y][new_x] - 3] is not None:
+                        quarter = self.energy // 4  # энергия
+                        self.energy -= quarter
+                        genesis.bots[genesis.world[new_y][new_x] - 3].energy += quarter
+                        quarter = self.minerals // 4
+                        self.minerals -= quarter
+                        genesis.bots[genesis.world[new_y][new_x] - 3].minerals += quarter
+                        if genesis.bots[genesis.world[new_y][new_x] - 3].minerals > 999:
+                            genesis.bots[genesis.world[new_y][new_x] - 3] = 999
                     count += 5
-            elif command == 36:  # выравниться по горизонтали (пока хз что делает)
+            elif command == 36:  # выравниться по горизонтали
                 if randint(0, 1):  # с шансом 0.5 поворачиваемся направо
                     self.direction = 3
                 else:
@@ -360,11 +359,11 @@ class Bot:
                 else:
                     count += 3
             elif command == 40:  # многоклеточность (создать потомка, связанного с текущим ботом)
-                self.bot_double(False)
+                self.bot_double(True)
                 count += 1
                 break
             elif command == 41:  # размножение (свободного бота)
-                self.bot_double(True)
+                self.bot_double(False)
                 count += 1
                 break
             elif command == 43:  # окружен ли бот
@@ -379,7 +378,7 @@ class Bot:
                     t = 1
                 else:
                     t = 2
-                smth = season - (self.y - 1) // 5 + t
+                smth = genesis.season - (self.y - 1) // 5 + t
                 if smth >= 3:
                     count += 1
                 else:
@@ -417,21 +416,104 @@ class Bot:
                 new_y, new_x = self.y + delta_y, self.x + delta_x
                 new_y, new_x = self.check_coords(new_y, new_x)
                 self.energy -= 10
-                if self.energy > 0 and world[new_y][new_x] >= 3:
+                if self.energy > 0 and genesis.world[new_y][new_x] >= 3 and genesis.bots[
+                    genesis.world[new_y][new_x] - 3] is not None:
                     # print(world[new_y][new_x] - 3, bots)
-                    bots[world[new_y][new_x] - 3].gens[randint(0, 63)] = randint(1, 64)
+                    genesis.bots[genesis.world[new_y][new_x] - 3].gens[randint(0, 63)] = randint(1, 64)
                 count += 1
             else:
                 count += command
         self.command_count = count
 
 
+import sys
+from consts import *
+from front import *
+
+
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+
+class Game:
+    def init_world(self):
+        # global world, bots, season
+        self.world = [[0 for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
+        #for i in range(WORLD_HEIGHT):
+        adam = Bot(0, WORLD_WIDTH // 2, [25] * 64, 500, 500, 3)
+        adam.direction = randint(0, 7)
+        self.world[adam.y][adam.x] = adam.index
+        self.season = 11
+        self.bots = []
+        self.bots.append(adam)
+
+    def world_fixer(self):
+        for y in range(WORLD_HEIGHT):
+            for x in range(WORLD_WIDTH):
+                if self.world[y][x] >= 3 and self.bots[self.world[y][x] - 3] is None:
+                    self.world[y][x] = 0
+
+    def radiation(self):
+        for index in range(len(self.bots)):
+            if self.bots[index] is not None:
+                if self.bots[index].y <= 10:
+                    self.bots[index].gens[randint(0, 63)] = randint(1, 64)
+
+    def main_do_one_turn(self):
+        global running
+        # print('turn started')
+        self.bot_count = 0
+        self.season_time = 0
+        while self.bot_count < len(self.bots):
+            if self.bots[self.bot_count] is not None:
+                # self.bots[self.bot_count].season = self.season
+                self.bots[self.bot_count].execute_commands()
+                if self.bots[self.bot_count] is not None:
+                    self.bots[self.bot_count].check_values()
+                self.world_fixer()
+            self.bot_count += 1
+            # print(self.bot_count)
+        self.season_time += 1
+        self.radiation()
+        if self.season_time == MAX_SEASON_TIME:
+            season_temp = self.season_time % 4
+            if season_temp == 0:
+                self.season = 11
+            elif season_temp == 2:
+                self.season = 9
+            else:
+                self.season = 10
+            self.season_time = 0
+        # print('turn ended')
+
+
 if __name__ == '__main__':
-    season = 2
-    levels = {}
-    world = [[i // 20 for _ in range(WORLD_WIDTH)] for i in range(WORLD_HEIGHT)]
-    # bots_board = [[None for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
-    adam = Bot(20, 20, [25] * 64, WORLD_HEIGHT // 2, WORLD_WIDTH // 2, set(), 3)
-    bots = []
-    bots.append(adam)
-    world[adam.y][adam.x] = adam.index + 3
+    genesis = Game()
+    genesis.init_world()
+    smth = 0
+    running = True
+    fps = 30
+    size = WIDTH, HEIGHT = WORLD_WIDTH * 4, WORLD_HEIGHT * 4
+    pygame.init()
+    screen = pygame.display.set_mode(size)
+    clock = pygame.time.Clock()
+
+    board = Board(WORLD_WIDTH, WORLD_HEIGHT)
+    board.set_view(1, 1, 4)
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                terminate()
+
+        genesis.main_do_one_turn()
+        genesis.radiation()
+        # print(*genesis.bots[0].gens)
+        # print(len(genesis.bots))
+        screen.fill((0, 0, 0))
+        board.board = genesis.world
+        board.render(genesis.bots, screen)
+        pygame.display.flip()
+        clock.tick(fps)

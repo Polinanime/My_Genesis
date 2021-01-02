@@ -1,13 +1,14 @@
-import pygame
 import sys
 
 from bot import *
 from consts import *
 from front import *
 
+
 def terminate():
     pygame.quit()
     sys.exit()
+
 
 class Game:
     def init_world(self):
@@ -26,7 +27,7 @@ class Game:
             if self.bots[index] is not None:
                 if self.bots[index].y <= 10:
                     self.bots[index].gens[randint(0, 63)] = randint(1, 64)
-                    # print('changed')
+        update_bots(self.bots)
 
     def main_do_one_turn(self):
         global running
@@ -39,7 +40,7 @@ class Game:
             self.bots[self.bot_count].season = self.season
             self.bots[self.bot_count].execute_commands()
             # print(bots[bot_count].gens)
-            bot_count += 1
+            self.bot_count += 1
         self.season_time += 1
         self.radiation()
         # print(bots)
@@ -59,13 +60,8 @@ if __name__ == '__main__':
     genesis = Game()
     genesis.init_world()
     smth = 0
-    for row in genesis.world:
-        for elem in row:
-            if elem >= 3:
-                smth += 1
-    print(smth)
     running = True
-    fps = 10
+    fps = 100
     size = WIDTH, HEIGHT = WORLD_WIDTH * 4, WORLD_HEIGHT * 4
     pygame.init()
     screen = pygame.display.set_mode(size)
@@ -75,12 +71,6 @@ if __name__ == '__main__':
     board.set_view(1, 1, 4)
 
     while running:
-        smth = 0
-        for row in genesis.world:
-            for elem in row:
-                if elem >= 3:
-                    smth += 1
-        print(smth)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -89,10 +79,10 @@ if __name__ == '__main__':
 
         genesis.main_do_one_turn()
         genesis.radiation()
+        # print(*genesis.bots[0].gens)
+        # print(len(genesis.bots))
         screen.fill((0, 0, 0))
         board.board = genesis.world
         board.render(genesis.bots, screen)
         pygame.display.flip()
         clock.tick(fps)
-
-
