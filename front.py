@@ -30,7 +30,18 @@ class Board:
                     color = pygame.Color((26, 22, 42))
                 elif self.board[y][x] >= 3:
                     try:
-                        color = pygame.Color(bots[self.board[y][x] - 3].color)
+                        energy = bots[self.board[y][x] - 3].energy
+                        red = energy // 4
+                        minerals = bots[self.board[y][x] - 3].minerals
+                        blue = minerals // 4
+                        if red > 255:
+                            red = 255
+                        if blue > 255:
+                            blue = 255
+                        color = pygame.Color((0, 0, blue))#bots[self.board[y][x] - 3].color)
+                        if blue == 0:
+                            color = pygame.Color('green')
+                        color = bots[self.board[y][x] - 3].color
                     except Exception:
                         color = pygame.Color('pink')
                 else:

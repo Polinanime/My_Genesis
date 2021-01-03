@@ -236,6 +236,7 @@ class Bot:
                     self.y, self.x = new_y, new_x
                     genesis.world[new_y][new_x] = self.index
                     self.energy += 100
+                    self.minerals += 150
                     self.more_red()
                     count += 4
                 elif genesis.world[new_y][new_x] >= 3:  # скушал бота (сложная механика)
@@ -336,7 +337,7 @@ class Bot:
                         self.minerals -= quarter
                         genesis.bots[genesis.world[new_y][new_x] - 3].minerals += quarter
                         if genesis.bots[genesis.world[new_y][new_x] - 3].minerals > 999:
-                            genesis.bots[genesis.world[new_y][new_x] - 3] = 999
+                            genesis.bots[genesis.world[new_y][new_x] - 3].minerals = 999
                     count += 5
             elif command == 36:  # выравниться по горизонтали
                 if randint(0, 1):  # с шансом 0.5 поворачиваемся направо
