@@ -24,6 +24,8 @@ class Bot:
     def check_values(self):
         if self.energy <= 0:
             self.die_or_kill(self.index - 3)
+        if self.energy > 999:
+            self.energy = 999
 
     def die_or_kill(self, index):
         if genesis.bots[index] is not None:
@@ -34,7 +36,7 @@ class Bot:
                 genesis.bots[left].right_friend_index = right
             genesis.world[genesis.bots[index].y][genesis.bots[index].x] = 2
             genesis.bots[index] = None
-            print('дэд инсайд')
+            # print('дэд инсайд')
 
     def more_green(self):
         self.color[1] += DELTA_COLOR
@@ -125,10 +127,10 @@ class Bot:
         self.energy -= 150
         new_y, new_x = self.find_empty_cell()
         # print(new_y, new_x)
-        print(self.energy)
+        # print(self.energy)
         if (new_y, new_x) == (-1, -1) or self.energy <= 0:  # умер
             self.die_or_kill(self.index - 3)
-            print(123)
+            # print(123)
             return
 
         new_gens = deepcopy(self.gens)
@@ -139,7 +141,7 @@ class Bot:
 
         new_bot = Bot(new_y, new_x, new_gens, self.energy, self.minerals, 0)
         # здесь ему задаются здоровье, минералы и все такое
-        new_bot.color = self.color
+        new_bot.color = deepcopy(self.color)
         new_bot_index = None
         for i in range(len(genesis.bots)):
             if genesis.bots[i] is None:
@@ -188,13 +190,14 @@ class Bot:
                     smth = 2
                 new_energy = genesis.season - self.y // 6 + smth
                 new_energy *= 10
-                print(f'после фотосинтеза прибавилось {new_energy} энергии')
+                # print(f'после фотосинтеза прибавилось {new_energy} энергии')
                 if new_energy > 0:
                     self.energy += new_energy
                     self.more_green()
                 count += 1
             elif command in (26, 27):  # движение (отностельно, абсолютно)
-                if not self.is_multi:
+                # print('here')
+                if self.is_multi() == 0:  # только одноклеточные двигаются
                     if command == 26:  # относительно
                         self.direction = (self.direction + self.gens[(count + 1) % 64]) % 8
                     if command == 27:
@@ -206,6 +209,7 @@ class Bot:
                     if genesis.world[new_y][new_x] == 0:
                         # self.direction = new_direction
                         self.move(new_y, new_x)
+                        # print('moved')
                         count += 2
                     elif genesis.world[new_y][new_x] == 1:
                         count += 3
@@ -295,7 +299,7 @@ class Bot:
                 elif genesis.world[new_y][new_x] == 2:
                     count += 4
                 else:  # там бот
-                    print(genesis.world[new_y][new_x])
+                    # print(genesis.world[new_y][new_x])
                     try:
                         friend = genesis.bots[genesis.world[new_y][new_x] - 3]
                         if self.energy > friend.energy:
@@ -440,13 +444,17 @@ class Game:
     def init_world(self):
         # global world, bots, season
         self.world = [[0 for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
-        #for i in range(WORLD_HEIGHT):
+        # for i in range(WORLD_HEIGHT):
         adam = Bot(0, WORLD_WIDTH // 2, [25] * 64, 500, 500, 3)
+        eva = Bot(WORLD_HEIGHT - 1, WORLD_WIDTH // 2, [27] * 64, 500, 500, 3)
         adam.direction = randint(0, 7)
+        eva.direction = randint(0, 7)
         self.world[adam.y][adam.x] = adam.index
+        # self.world[eva.y][eva.x] = eva.index
         self.season = 11
         self.bots = []
         self.bots.append(adam)
+        # self.bots.append(eva)
 
     def world_fixer(self):
         for y in range(WORLD_HEIGHT):
@@ -454,10 +462,17 @@ class Game:
                 if self.world[y][x] >= 3 and self.bots[self.world[y][x] - 3] is None:
                     self.world[y][x] = 0
 
+    def move_bodies(self):
+        for y in range(WORLD_HEIGHT - 1, -1, -1):
+            for x in range(WORLD_WIDTH):
+                if self.world[y][x] == 2 and y + 1 <= WORLD_HEIGHT - 1 and self.world[y + 1][x] == 0:
+                    self.world[y + 1][x] = 2
+                    self.world[y][x] = 0
+
     def radiation(self):
         for index in range(len(self.bots)):
             if self.bots[index] is not None:
-                if self.bots[index].y <= 10:
+                if self.bots[index].y <= 10:  # or self.bots[index].y >= WORLD_HEIGHT - 10:
                     self.bots[index].gens[randint(0, 63)] = randint(1, 64)
 
     def main_do_one_turn(self):
@@ -476,6 +491,7 @@ class Game:
             # print(self.bot_count)
         self.season_time += 1
         self.radiation()
+        self.move_bodies()
         if self.season_time == MAX_SEASON_TIME:
             season_temp = self.season_time % 4
             if season_temp == 0:
@@ -486,34 +502,3 @@ class Game:
                 self.season = 10
             self.season_time = 0
         # print('turn ended')
-
-
-if __name__ == '__main__':
-    genesis = Game()
-    genesis.init_world()
-    smth = 0
-    running = True
-    fps = 30
-    size = WIDTH, HEIGHT = WORLD_WIDTH * 4, WORLD_HEIGHT * 4
-    pygame.init()
-    screen = pygame.display.set_mode(size)
-    clock = pygame.time.Clock()
-
-    board = Board(WORLD_WIDTH, WORLD_HEIGHT)
-    board.set_view(1, 1, 4)
-
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                terminate()
-
-        genesis.main_do_one_turn()
-        genesis.radiation()
-        # print(*genesis.bots[0].gens)
-        # print(len(genesis.bots))
-        screen.fill((0, 0, 0))
-        board.board = genesis.world
-        board.render(genesis.bots, screen)
-        pygame.display.flip()
-        clock.tick(fps)
