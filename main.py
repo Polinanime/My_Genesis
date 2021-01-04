@@ -1,6 +1,6 @@
 from copy import deepcopy
 from random import randint
-
+from saver import *
 
 # 11 - лето 10 - весна осень  9 - зимa
 
@@ -26,6 +26,8 @@ class Bot:
             self.die_or_kill(self.index - 3)
         if self.energy > 999:
             self.energy = 999
+        if self.minerals > 999:
+            self.minerals = 999
 
     def die_or_kill(self, index):
         if genesis.bots[index] is not None:
@@ -455,6 +457,7 @@ class Game:
         self.season = 11
         self.bots = []
         self.bots.append(adam)
+        self.prev_world, self.prev_bots = deepcopy(self.world), deepcopy(self.bots)
         # self.bots.append(eva)
 
     def world_fixer(self):
@@ -502,6 +505,10 @@ class Game:
             else:
                 self.season = 10
             self.season_time = 0
+        snapshot = make_snapshot(self.prev_world, self.world, self.bots)
+        # print(snapshot)
+        save_new_snapshot('test.gns', self.bots, self.world, snapshot)
+        self.prev_bots, self.prev_world = deepcopy(self.bots), deepcopy(self.world)
         # print('turn ended')
 
 
@@ -519,11 +526,12 @@ if __name__ == '__main__':
 
     board = Board(WORLD_WIDTH, WORLD_HEIGHT)
     board.set_view(1, 1, cell_size)
-
+    prepare_file('test.gns')
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                save_new_matrix('test.gns', genesis.bots, genesis.world)
                 terminate()
 
         genesis.main_do_one_turn()
