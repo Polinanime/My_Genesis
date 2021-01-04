@@ -8,7 +8,7 @@ def save_new_snapshot(file_name, bots, world, new_snapshot):
     if new_snapshot == []:
         file.writelines(['-\n'])
     else:
-        file.writelines(';'.join(new_snapshot))
+        file.writelines(';'.join(new_snapshot) + '\n')
     file.close()
 
 
@@ -26,7 +26,7 @@ def prepare_file(file_name):
         data = file.readlines()
         # print(data)
         old_snapshots = data[:len(data) - WORLD_HEIGHT]
-        print(old_snapshots)
+        # print(old_snapshots)
         file.close()
         file = open(f'saves/{file_name}', mode='wt', encoding='utf-8')
         file.writelines(old_snapshots)
@@ -42,10 +42,11 @@ def make_snapshot(last, cur, bots):
         for x in range(WORLD_WIDTH):
             if last[y][x] != cur[y][x]:
                 if cur[y][x] < 3:
-                    snapshot.append(str(cur[y][x]))
+                    snapshot.append(f'{y}-{x}-{cur[y][x]}')
                 else:
                     bot = bots[cur[y][x] - 3]
-                    snapshot.append('-'.join([str(i) for i in make_bot_characteristic(bot)]))
+                    snapshot.append(f'{y}-{x}-{bot.color}-{bot.energy}-{bot.minerals}')
+                    # snapshot.append('-'.join([str(i) for i in make_bot_characteristic(bot)]))
     return snapshot
 
 

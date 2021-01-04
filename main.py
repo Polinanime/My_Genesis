@@ -1,6 +1,8 @@
 from copy import deepcopy
 from random import randint
+
 from saver import *
+
 
 # 11 - лето 10 - весна осень  9 - зимa
 
@@ -447,6 +449,8 @@ class Game:
     def init_world(self):
         # global world, bots, season
         self.world = [[0 for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
+        self.bots = []
+        self.prev_world, self.prev_bots = deepcopy(self.world), deepcopy(self.bots)
         # for i in range(WORLD_HEIGHT):
         adam = Bot(0, WORLD_WIDTH // 2, [25] * 64, 500, 500, 3)
         eva = Bot(WORLD_HEIGHT - 1, WORLD_WIDTH // 2, [27] * 64, 500, 500, 3)
@@ -455,9 +459,7 @@ class Game:
         self.world[adam.y][adam.x] = adam.index
         # self.world[eva.y][eva.x] = eva.index
         self.season = 11
-        self.bots = []
         self.bots.append(adam)
-        self.prev_world, self.prev_bots = deepcopy(self.world), deepcopy(self.bots)
         # self.bots.append(eva)
 
     def world_fixer(self):
