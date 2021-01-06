@@ -1,9 +1,10 @@
 import os
 
 from consts import *
+from main import Bot
 
 
-def save_new_snapshot(file_name, bots, world, new_snapshot):
+def save_new_snapshot(file_name, new_snapshot):
     file = open(f'saves/{file_name}', mode='at', encoding='utf-8')
     if new_snapshot == []:
         file.writelines(['-\n'])
@@ -13,10 +14,10 @@ def save_new_snapshot(file_name, bots, world, new_snapshot):
 
 
 def save_new_matrix(file_name, bots, world):
-    file = open(f'saves/{file_name}', mode='a', encoding='utf-8')
+    file = open(f'saves/{file_name}', mode='w', encoding='utf-8')
     new_matrix = make_matrix_with_bots(bots, world)
-    file.writelines('\n')
-    file.writelines(new_matrix)
+    for row in new_matrix:
+        file.writelines(row + '\n')
     file.close()
 
 
@@ -32,7 +33,7 @@ def prepare_file(file_name):
         file.writelines(old_snapshots)
         del old_snapshots
     else:
-        file = open(f'saves/{file_name} ', mode='wt', encoding='utf-8')
+        file = open(f'saves/{file_name}', mode='wt', encoding='utf-8')
     file.close()
 
 
@@ -72,9 +73,10 @@ def make_matrix_with_bots(bots, world):
             if world[y][x] >= 3:
                 bot = bots[world[y][x] - 3]
                 list_elem = make_bot_characteristic(bot)
-                elem = ','.join([str(i) for i in list_elem])
+                elem = '-'.join([str(i) for i in list_elem])
                 row += ';' + elem
             else:
                 row += ';' + str(world[y][x])
         matrix.append(row)
     return matrix
+

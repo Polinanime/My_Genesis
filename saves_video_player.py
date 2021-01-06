@@ -1,5 +1,5 @@
 import sys
-
+import sys
 import pygame
 
 from consts import *
@@ -67,6 +67,7 @@ def terminate():
 
 
 if __name__ == '__main__':
+    print(sys.argv)
     file_name = input()  # TODO: os.arvg или типа того
     running = True
     fps = 5

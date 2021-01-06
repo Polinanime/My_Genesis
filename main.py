@@ -509,9 +509,49 @@ class Game:
             self.season_time = 0
         snapshot = make_snapshot(self.prev_world, self.world, self.bots)
         # print(snapshot)
-        save_new_snapshot('test.gns', self.bots, self.world, snapshot)
+        save_new_snapshot(file_name + '.gns', snapshot)
         self.prev_bots, self.prev_world = deepcopy(self.bots), deepcopy(self.world)
         # print('turn ended')
+
+
+def load_matrix(file_name):
+    file = open(f'saves/{file_name}', mode='rt', encoding='utf-8')
+    bots = []
+    world = [[0 for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
+    for y in range(WORLD_HEIGHT):
+        row = file.readline().split(';')[1:]
+        # print(len(row), row)
+        for x in range(WORLD_WIDTH):
+            elem = row[x].split('-')
+            if int(elem[0]) >= 3:
+                gens = list(map(int, elem[1].split(',')))
+                energy = int(elem[2])
+                minerals = int(elem[3])
+                direction = int(elem[4])
+                color = elem[5]
+                color = list(map(int, color[1:len(color) - 1].split(', ')))
+                left_friend = elem[6]
+                right_friend = elem[7]
+                if left_friend == 'None':
+                    left_friend = None
+                else:
+                    left_friend = int(left_friend)
+                if right_friend == 'None':
+                    right_friend = None
+                else:
+                    right_friend = int(right_friend)
+                command_count = int(elem[8])
+                index = len(bots) + 3
+                bot = Bot(y, x, gens, energy, minerals, index)
+                bot.direction = direction
+                bot.color = color
+                bot.left_friend_index, bot.right_friend_index = left_friend, right_friend
+                bot.command_count = command_count
+                bots.append(bot)
+                world[y][x] = index
+            else:
+                world[y][x] = int(elem[0])
+    return world, bots
 
 
 if __name__ == '__main__':
@@ -528,13 +568,31 @@ if __name__ == '__main__':
 
     board = Board(WORLD_WIDTH, WORLD_HEIGHT)
     board.set_view(1, 1, cell_size)
-    prepare_file('test.gns')
+    # prepare_file('test.gns')
+    s_down, ctrl_down = False, False
+    file_name = 'test'
+    if os.path.exists(f'saves/{file_name + "_matrix.gns"}'):
+        genesis.world, genesis.bots = load_matrix(file_name + '_matrix.gns')
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-                save_new_matrix('test.gns', genesis.bots, genesis.world)
+                save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
                 terminate()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LCTRL:
+                    ctrl_down = True
+                if event.key == pygame.K_s:
+                    s_down = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LCTRL:
+                    ctrl_down = False
+                if event.type == pygame.K_s:
+                    s_down = False
+            if s_down and ctrl_down:
+                save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
+                s_down, ctrl_down = False, False
 
         genesis.main_do_one_turn()
         genesis.radiation()
