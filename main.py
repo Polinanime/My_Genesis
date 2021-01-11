@@ -1,10 +1,10 @@
+# 11 - лето 10 - весна осень  9 - зимa
+import sys
 from copy import deepcopy
 from random import randint
 
+from front import *
 from saver import *
-
-
-# 11 - лето 10 - весна осень  9 - зимa
 
 
 class Bot:
@@ -435,11 +435,6 @@ class Bot:
         self.command_count = count
 
 
-import sys
-from consts import *
-from front import *
-
-
 def terminate():
     pygame.quit()
     sys.exit()
@@ -558,9 +553,11 @@ if __name__ == '__main__':
     genesis = Game()
     genesis.init_world()
     smth = 0
+    mode = 0
     running = True
     fps = 30
     cell_size = 6
+    is_pause = True
     size = WIDTH, HEIGHT = WORLD_WIDTH * cell_size, WORLD_HEIGHT * cell_size
     pygame.init()
     screen = pygame.display.set_mode(size)
@@ -580,11 +577,20 @@ if __name__ == '__main__':
                 running = False
                 save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
                 terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 2:
+                    mode += 1
+                    mode %= 3
+                if event.button == 1 and is_pause:
+                    board.get_click(event.pos, screen)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LCTRL:
                     ctrl_down = True
                 if event.key == pygame.K_s:
                     s_down = True
+                if event.key == pygame.K_ESCAPE:
+                    is_pause = not is_pause
+                    print('here')
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LCTRL:
                     ctrl_down = False
@@ -593,13 +599,16 @@ if __name__ == '__main__':
             if s_down and ctrl_down:
                 save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
                 s_down, ctrl_down = False, False
-
-        genesis.main_do_one_turn()
-        genesis.radiation()
+        if not is_pause:
+            genesis.main_do_one_turn()
+            genesis.radiation()
+            screen.fill((0, 0, 0))
+            board.board = genesis.world
+            board.render(genesis.bots, screen, mode)
+        else:
+            board.render_pause(screen)
         # print(*genesis.bots[0].gens)
         # print(len(genesis.bots))
-        screen.fill((0, 0, 0))
-        board.board = genesis.world
-        board.render(genesis.bots, screen)
+
         pygame.display.flip()
         clock.tick(fps)
