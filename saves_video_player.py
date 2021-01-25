@@ -1,5 +1,5 @@
 import sys
-import sys
+
 import pygame
 
 from consts import *
@@ -15,6 +15,7 @@ class Board:
         self.left = 10
         self.top = 10
         self.cell_size = 30
+        self.generation_number = 0
 
     # настройка внешнего вида
     def set_view(self, left, top, cell_size):
@@ -24,11 +25,14 @@ class Board:
 
     def render(self, deltas):
         # print(deltas)
+        self.generation_number += 1
         for elem in deltas:
             is_bot = False
             elem = elem.split('-')
             if len(elem) == 5:
                 is_bot = True
+            if elem[0] == '' or elem[1] == '':
+                break
             y, x = int(elem[0]), int(elem[1])
             if is_bot:
                 if mode == 0:
@@ -59,6 +63,7 @@ class Board:
             # print(y, x, color)
             pygame.draw.rect(screen, color, (sx, sy, self.cell_size, self.cell_size))
             # pygame.draw.rect(screen, pygame.Color('white'), (sx, sy, self.cell_size, self.cell_size), 1)
+        pygame.draw.line(screen, (255, 0, 0), (WIDTH * self.cell_size, 0), (WIDTH * self.cell_size, HEIGHT * self.cell_size), 10)
 
 
 def terminate():
@@ -67,22 +72,21 @@ def terminate():
 
 
 if __name__ == '__main__':
-    print(sys.argv)
-    file_name = input()  # TODO: os.arvg или типа того
+    file_name = 'test'
     running = True
     fps = 5
     cell_size = 6
-    size = WIDTH, HEIGHT = WORLD_WIDTH * cell_size, WORLD_HEIGHT * cell_size
+    size = WIDTH, HEIGHT = WORLD_WIDTH * cell_size + PLAYER_BOARD, WORLD_HEIGHT * cell_size
     pygame.init()
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
     board = Board(WORLD_WIDTH, WORLD_HEIGHT)
     board.set_view(1, 1, cell_size)
     screen.fill((0, 0, 0))
-    file = open(f'saves/{file_name}', mode='rt', encoding='utf-8')
+    file = open(f'saves/{file_name}.gns', mode='rt', encoding='utf-8')
     is_end = False
     mode = 0
-    to_show = False
+    to_show = True
 
     while running:
         for event in pygame.event.get():

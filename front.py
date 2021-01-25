@@ -12,6 +12,7 @@ class Board:
         self.top = 10
         self.cell_size = 30
         self.mode = 0
+        self.file_name = 'something'
 
     # настройка внешнего вида
     def set_view(self, left, top, cell_size):
@@ -49,21 +50,35 @@ class Board:
                 pygame.draw.rect(screen, color, (sx, sy, self.cell_size, self.cell_size))
                 # pygame.draw.rect(screen, pygame.Color('white'), (sx, sy, self.cell_size, self.cell_size), 1)
 
+    def check_pause(self):
+        return self.mode == 1
+
     def render_pause(self, screen):
         screen.fill((0, 0, 0))
         print(self.mode)
         if self.mode == 0:
-            intro_text = ["Игра Искусственная жизнь (alpha)", "",
+            text = ["Игра Искусственная жизнь (alpha)", "",
                           "Продолжить",
                           "Изменить файл сохранения",
                           "Управлeние", "", "", "", "", "", ""
                           "*copyright*"]
-
+        elif self.mode == 3:    # управление
+            text = ["Управление", "",
+                    "ctrl + s - сохранить текущую матрицу ",
+                    "И ЧТО-ТО ЕЩЕ"]
+        elif self.mode == 1:  # выйти из меню
+            return
+        elif self.mode == 2:    # сменить файл
+            font = pygame.font.Font(None, 40)
+            file_name_text = font.render(self.file_name, 1, pygame.Color('white'))
+            rect = file_name_text.get_rect()
+            screen.blit(file_name_text, rect)
+            return
         # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
         # screen.blit(fon, (0, 0))
         font = pygame.font.Font(None, 40)
         text_coord = 50
-        for line in intro_text:
+        for line in text:
             string_rendered = font.render(line, 1, pygame.Color('white'))
             intro_rect = string_rendered.get_rect()
             text_coord += 10

@@ -441,6 +441,9 @@ def terminate():
 
 
 class Game:
+    def __init__(self):
+        self.turn_count = 0
+
     def init_world(self):
         # global world, bots, season
         self.world = [[0 for _ in range(WORLD_WIDTH)] for __ in range(WORLD_HEIGHT)]
@@ -505,7 +508,11 @@ class Game:
         snapshot = make_snapshot(self.prev_world, self.world, self.bots)
         # print(snapshot)
         save_new_snapshot(file_name + '.gns', snapshot)
+        save_new_matrix(file_name + '_matrix.gns', self.bots, self.world)
         self.prev_bots, self.prev_world = deepcopy(self.bots), deepcopy(self.world)
+        if len(self.bots) == self.bots.count(None):
+            print('Все боты померли')
+            quit()
         # print('turn ended')
 
 
@@ -550,6 +557,7 @@ def load_matrix(file_name):
 
 
 if __name__ == '__main__':
+    to_show = False
     genesis = Game()
     genesis.init_world()
     smth = 0
@@ -559,56 +567,65 @@ if __name__ == '__main__':
     cell_size = 6
     is_pause = True
     size = WIDTH, HEIGHT = WORLD_WIDTH * cell_size, WORLD_HEIGHT * cell_size
-    pygame.init()
-    screen = pygame.display.set_mode(size)
-    clock = pygame.time.Clock()
-
-    board = Board(WORLD_WIDTH, WORLD_HEIGHT)
-    board.set_view(1, 1, cell_size)
+    if to_show:
+        pygame.init()
+        screen = pygame.display.set_mode(size)
+        clock = pygame.time.Clock()
+        board = Board(WORLD_WIDTH, WORLD_HEIGHT)
+        board.set_view(1, 1, cell_size)
     # prepare_file('test.gns')
     s_down, ctrl_down = False, False
     file_name = 'test'
     if os.path.exists(f'saves/{file_name + "_matrix.gns"}'):
         genesis.world, genesis.bots = load_matrix(file_name + '_matrix.gns')
 
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
-                terminate()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 2:
-                    mode += 1
-                    mode %= 3
-                if event.button == 1 and is_pause:
-                    board.get_click(event.pos, screen)
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LCTRL:
-                    ctrl_down = True
-                if event.key == pygame.K_s:
-                    s_down = True
-                if event.key == pygame.K_ESCAPE:
-                    is_pause = not is_pause
-                    print('here')
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LCTRL:
-                    ctrl_down = False
-                if event.type == pygame.K_s:
-                    s_down = False
-            if s_down and ctrl_down:
-                save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
-                s_down, ctrl_down = False, False
-        if not is_pause:
-            genesis.main_do_one_turn()
-            genesis.radiation()
-            screen.fill((0, 0, 0))
-            board.board = genesis.world
-            board.render(genesis.bots, screen, mode)
-        else:
-            board.render_pause(screen)
-        # print(*genesis.bots[0].gens)
-        # print(len(genesis.bots))
+    if to_show:
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
+                    terminate()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 2:
+                        mode += 1
+                        mode %= 3
+                    if event.button == 1 and is_pause:
+                        board.get_click(event.pos, screen)
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LCTRL:
+                        ctrl_down = True
+                    if event.key == pygame.K_s:
+                        s_down = True
+                    if event.key == pygame.K_ESCAPE:
+                        is_pause = not is_pause
+                        print('here')
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LCTRL:
+                        ctrl_down = False
+                    if event.type == pygame.K_s:
+                        s_down = False
+                if s_down and ctrl_down:
+                    save_new_matrix(file_name + '_matrix.gns', genesis.bots, genesis.world)
+                    s_down, ctrl_down = False, False
+            if not is_pause:
+                genesis.main_do_one_turn()
+                genesis.radiation()
+                screen.fill((0, 0, 0))
+                board.board = genesis.world
+                board.render(genesis.bots, screen, mode)
+            else:
+                # is_pause = False
+                mode = 0
+                board.mode = 0
+                board.file_name = file_name
+                board.render_pause(screen)
+            keys = pygame.key.get_pressed()
+            # print(*genesis.bots[0].gens)
+            # print(len(genesis.bots))
 
-        pygame.display.flip()
-        clock.tick(fps)
+            pygame.display.flip()
+            clock.tick(fps)
+    else:
+        while running:
+            genesis.main_do_one_turn()

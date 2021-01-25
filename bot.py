@@ -153,7 +153,7 @@ class Bot:
 
         if new_bot_index is None:
             new_bot_index = len(self.genesis.bots)
-            genesis.bots.append(None)
+            self.genesis.bots.append(None)
         new_bot_index += 3
 
         # new_bot_index += 3
@@ -392,7 +392,7 @@ class Bot:
                     count += 1
                 else:
                     count += 2
-            elif command == 45:  # прибавляются ли минералы
+            elif command == 45:  # прибавляется ли минералы
                 if self.y > MAX_EAT_SUN_HEIGHT:
                     count += 1
                 else:
