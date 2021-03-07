@@ -76,7 +76,7 @@ if __name__ == '__main__':
     running = True
     fps = 5
     cell_size = 6
-    size = WIDTH, HEIGHT = WORLD_WIDTH * cell_size + PLAYER_BOARD, WORLD_HEIGHT * cell_size
+    size = WIDTH, HEIGHT = WORLD_WIDTH * cell_size, WORLD_HEIGHT * cell_size
     pygame.init()
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
